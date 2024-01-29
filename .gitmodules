@@ -1,0 +1,9 @@
+[submodule "imgui"]
+	path = imgui
+	url = git@github.com:ocornut/imgui.git
+[submodule "src/imgui"]
+	path = src/imgui
+	url = git@github.com:ocornut/imgui.git
+[submodule "src/vk-bootstrap"]
+	path = src/vk-bootstrap
+	url = https://github.com/charles-lunarg/vk-bootstrap

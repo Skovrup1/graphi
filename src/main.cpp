@@ -1,10 +1,10 @@
-#include "lib.cpp"
+#include "stb_image.h"
+#include "tiny_obj_loader.h"
+#include "vk_mem_alloc.h"
 #include <cstdio>
 
 int main() {
-    Foo x = Foo(1);
-
-    printf("hello world %d\n", x.GetCond());
+    printf("hello world\n");
 
     return 0;
 }
