@@ -1,10 +1,13 @@
-#include "stb_image.h"
-#include "tiny_obj_loader.h"
-#include "vk_mem_alloc.h"
-#include <cstdio>
+#include <vk_engine.h>
 
 int main() {
-    printf("hello world\n");
+    VulkanEngine engine;
+
+    engine.init()
+
+    engine.run();
+
+    engine.cleanup();
 
     return 0;
 }
