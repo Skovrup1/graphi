@@ -12,12 +12,15 @@ include_directories(imgui imgui/backends)
 #vk bootstrap
 add_subdirectory(vk-bootstrap)
 
-#glm
+#find packages
 find_package(glm CONFIG REQUIRED)
+find_package(SDL2 REQUIRED)
+find_package(fmt REQUIRED)
+find_package(Vulkan REQUIRED)
 
-add_executable(graphi_app main.cpp)
+add_executable(graphi_app main.cpp vk_engine.cpp vk_engine.h vk_types.h)
 
-target_link_libraries(graphi_app PRIVATE glm::glm-header-only)
-target_link_libraries(graphi_app PRIVATE vk-bootstrap::vk-bootstrap)
-
+target_link_libraries(graphi_app glm::glm-header-only)
+target_link_libraries(graphi_app vk-bootstrap::vk-bootstrap)
+target_link_libraries(graphi_app SDL2 fmt Vulkan::Vulkan)
 

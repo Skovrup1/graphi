@@ -1,9 +1,10 @@
-#include <vk_engine.h>
+#include "vk_engine.h"
+#include <fmt/core.h>
 
 int main() {
     VulkanEngine engine;
 
-    engine.init()
+    engine.init();
 
     engine.run();
 
