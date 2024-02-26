@@ -18,7 +18,7 @@ find_package(SDL2 REQUIRED)
 find_package(fmt REQUIRED)
 find_package(Vulkan REQUIRED)
 
-add_executable(graphi_app main.cpp vk_engine.cpp vk_engine.h vk_types.h)
+add_executable(graphi_app main.cpp vk_engine.cpp vk_engine.h vk_types.h vk_init.cpp vk_init.h vk_imgs.cpp vk_imgs.h)
 
 target_link_libraries(graphi_app glm::glm-header-only)
 target_link_libraries(graphi_app vk-bootstrap::vk-bootstrap)

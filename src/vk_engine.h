@@ -7,6 +7,9 @@
 struct FrameData {
     VkCommandPool command_pool;
     VkCommandBuffer main_command_buffer;
+    VkSemaphore swapchain_semaphore;
+    VkSemaphore render_semaphore;
+    VkFence render_fence;
 };
 
 constexpr unsigned int FRAME_OVERLAP = 2;
