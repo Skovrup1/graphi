@@ -11,10 +11,8 @@ include_directories(imgui imgui/backends)
 
 #vk bootstrap
 add_subdirectory(vk-bootstrap)
-
 #sdl2
 add_subdirectory(sdl)
-
 #fmt
 add_subdirectory(fmt)
 
