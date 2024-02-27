@@ -14,3 +14,6 @@
 [submodule "src/fmt"]
 	path = src/fmt
 	url = git@github.com:fmtlib/fmt.git
+[submodule "src/glm"]
+	path = src/glm
+	url = git@github.com:g-truc/glm.git
