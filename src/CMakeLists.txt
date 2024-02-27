@@ -20,7 +20,8 @@ add_subdirectory(glm)
 
 #find vulkan on windows
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-
+    set(ENV{VULKAN_SDK} "C:/VulkanSDK/1.3.275.0")
+    set(Vulkan_LIBRARY "C:/VulkanSDK/1.3.275.0/Lib")
 endif()
 find_package(Vulkan REQUIRED)
 
