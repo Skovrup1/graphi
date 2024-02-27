@@ -12,6 +12,9 @@ include_directories(imgui imgui/backends)
 #vk bootstrap
 add_subdirectory(vk-bootstrap)
 
+#sdl2
+add_subdirectory(sdl)
+
 # FetchContent for glm
 include(FetchContent)
 
@@ -24,13 +27,13 @@ FetchContent_MakeAvailable(glm)
 
 #find packages
 #find_package(glm CONFIG REQUIRED)
-find_package(SDL2 REQUIRED)
+#find_package(SDL2 REQUIRED)
 find_package(fmt REQUIRED)
 find_package(Vulkan REQUIRED)
 
 add_executable(main main.cpp vk_engine.cpp vk_engine.h vk_types.h vk_init.cpp vk_init.h vk_imgs.cpp vk_imgs.h)
 
-target_link_libraries(main PRIVATE glm::glm)
+target_link_libraries(main glm::glm)
 target_link_libraries(main vk-bootstrap::vk-bootstrap)
-target_link_libraries(main SDL2 fmt Vulkan::Vulkan)
+target_link_libraries(main SDL2::SDL2 fmt Vulkan::Vulkan)
 

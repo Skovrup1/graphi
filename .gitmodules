@@ -7,3 +7,7 @@
 [submodule "src/vk-bootstrap"]
 	path = src/vk-bootstrap
 	url = https://github.com/charles-lunarg/vk-bootstrap
+[submodule "src/sdl"]
+	path = src/sdl
+	url = https://github.com/libsdl-org/SDL.git
+	branch = SDL2
