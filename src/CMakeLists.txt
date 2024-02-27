@@ -12,15 +12,25 @@ include_directories(imgui imgui/backends)
 #vk bootstrap
 add_subdirectory(vk-bootstrap)
 
+# FetchContent for glm
+include(FetchContent)
+
+FetchContent_Declare(
+    glm
+    GIT_REPOSITORY https://github.com/g-truc/glm.git
+    GIT_TAG bf71a834948186f4097caa076cd2663c69a10e1e # refs/tags/0.9.9.8
+)
+FetchContent_MakeAvailable(glm)
+
 #find packages
-find_package(glm CONFIG REQUIRED)
+#find_package(glm CONFIG REQUIRED)
 find_package(SDL2 REQUIRED)
 find_package(fmt REQUIRED)
 find_package(Vulkan REQUIRED)
 
-add_executable(graphi_app main.cpp vk_engine.cpp vk_engine.h vk_types.h vk_init.cpp vk_init.h vk_imgs.cpp vk_imgs.h)
+add_executable(main main.cpp vk_engine.cpp vk_engine.h vk_types.h vk_init.cpp vk_init.h vk_imgs.cpp vk_imgs.h)
 
-target_link_libraries(graphi_app glm::glm-header-only)
-target_link_libraries(graphi_app vk-bootstrap::vk-bootstrap)
-target_link_libraries(graphi_app SDL2 fmt Vulkan::Vulkan)
+target_link_libraries(main PRIVATE glm::glm)
+target_link_libraries(main vk-bootstrap::vk-bootstrap)
+target_link_libraries(main SDL2 fmt Vulkan::Vulkan)
 
