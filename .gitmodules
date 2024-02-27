@@ -11,3 +11,6 @@
 	path = src/sdl
 	url = https://github.com/libsdl-org/SDL.git
 	branch = SDL2
+[submodule "src/fmt"]
+	path = src/fmt
+	url = git@github.com:fmtlib/fmt.git
