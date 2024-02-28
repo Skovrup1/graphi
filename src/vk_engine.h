@@ -1,9 +1,6 @@
 #pragma once
 
-#include "vk_mem_alloc.h"
 #include "vk_types.h"
-#include <functional>
-#include <vulkan/vulkan_core.h>
 
 struct DeletionQueue { 
     std::deque<std::function<void()>> deletors;

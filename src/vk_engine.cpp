@@ -1,24 +1,18 @@
 #include "vk_engine.h"
 
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_events.h>
-#include <SDL2/SDL_video.h>
 #include <SDL2/SDL_vulkan.h>
 
-#include <cassert>
-#include <chrono>
-#include <cstdint>
 #include <fmt/core.h>
 #include <thread>
-#include <vulkan/vulkan_core.h>
 
 #include "vk-bootstrap/src/VkBootstrap.h"
+
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
-
+#include "vk_util.h"
 #include "vk_init.h"
 #include "vk_types.h"
-#include "vk_util.h"
 
 const bool use_validation_layers = true;
 VulkanEngine *loaded_engine = nullptr;
