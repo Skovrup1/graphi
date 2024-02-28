@@ -18,7 +18,7 @@
 #include <glm/vec4.hpp>
 #include <vulkan/vulkan.h>
 
-#include "vk_mem_alloc.h"
+#include "vma/include/vk_mem_alloc.h"
 
 #define VK_CHECK(x)                                                            \
     do {                                                                       \

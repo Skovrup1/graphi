@@ -17,3 +17,6 @@
 [submodule "src/glm"]
 	path = src/glm
 	url = git@github.com:g-truc/glm.git
+[submodule "src/vma"]
+	path = src/vma
+	url = git@github.com:GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
