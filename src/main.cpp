@@ -1,5 +1,4 @@
 #include "vk_engine.h"
-#include <fmt/core.h>
 
 int main() {
     VulkanEngine engine;

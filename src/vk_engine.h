@@ -2,12 +2,10 @@
 
 #include "vk_types.h"
 
-struct DeletionQueue { 
+struct DeletionQueue {
     std::deque<std::function<void()>> deletors;
 
-    void push_func(std::function<void()>&& func) {
-        deletors.push_back(func);
-    }
+    void push_func(std::function<void()> &&func) { deletors.push_back(func); }
 
     // functions callbacks are inefficient but this will be ok for now
     void flush() {

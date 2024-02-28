@@ -3,7 +3,6 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
 
-#include <fmt/core.h>
 #include <thread>
 
 #include "vk-bootstrap/src/VkBootstrap.h"

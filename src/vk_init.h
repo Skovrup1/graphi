@@ -1,7 +1,6 @@
 #pragma once
 
-#include <cstdint>
-#include <vulkan/vulkan_core.h>
+#include "vk_types.h"
 
 namespace vkinit {
 VkCommandPoolCreateInfo

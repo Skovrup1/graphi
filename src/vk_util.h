@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vulkan/vulkan_core.h>
+#include "vk_types.h"
 
 namespace vkutil {
 void transition_img(VkCommandBuffer cmd, VkImage img, VkImageLayout curr_layout,
