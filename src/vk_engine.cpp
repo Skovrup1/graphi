@@ -8,16 +8,17 @@
 #include <cassert>
 #include <chrono>
 #include <cstdint>
-#include <cstdio>
 #include <fmt/core.h>
 #include <thread>
 #include <vulkan/vulkan_core.h>
 
-#include "vk_imgs.h"
+#include "vk-bootstrap/src/VkBootstrap.h"
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
+
 #include "vk_init.h"
 #include "vk_types.h"
-
-#include "vk-bootstrap/src/VkBootstrap.h"
+#include "vk_util.h"
 
 const bool use_validation_layers = true;
 VulkanEngine *loaded_engine = nullptr;
@@ -89,10 +90,56 @@ void VulkanEngine::init_vulkan() {
     graphics_queue = vkb_device.get_queue(vkb::QueueType::graphics).value();
     graphics_queue_family =
         vkb_device.get_queue_index(vkb::QueueType::graphics).value();
+
+    VmaAllocatorCreateInfo alloc_info = {};
+    alloc_info.physicalDevice = active_gpu;
+    alloc_info.device = device;
+    alloc_info.instance = instance;
+    alloc_info.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+    vmaCreateAllocator(&alloc_info, &alloc);
+
+    main_deletion_queue.push_func([&]() { vmaDestroyAllocator(alloc); });
 }
 
 void VulkanEngine::init_swapchain() {
     create_swapchain(window_extent.width, window_extent.height);
+
+    VkExtent3D draw_img_extent = {
+        window_extent.width,
+        window_extent.height,
+        1,
+    };
+
+    draw_img.img_format = VK_FORMAT_R16G16B16A16_SFLOAT;
+    draw_img.img_extent = draw_img_extent;
+
+    VkImageUsageFlags draw_img_usages{};
+    draw_img_usages |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    draw_img_usages |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    draw_img_usages |= VK_IMAGE_USAGE_STORAGE_BIT;
+    draw_img_usages |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+    VkImageCreateInfo rimg_info = vkinit::img_create_info(
+        draw_img.img_format, draw_img_usages, draw_img_extent);
+
+    VmaAllocationCreateInfo rimg_alloc_info = {};
+    rimg_alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    rimg_alloc_info.requiredFlags =
+        VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    vmaCreateImage(alloc, &rimg_info, &rimg_alloc_info, &draw_img.img,
+                   &draw_img.allocation, nullptr);
+
+    VkImageViewCreateInfo rview_info = vkinit::img_view_create_info(
+        draw_img.img_format, draw_img.img, VK_IMAGE_ASPECT_COLOR_BIT);
+
+    VK_CHECK(
+        vkCreateImageView(device, &rview_info, nullptr, &draw_img.img_view));
+
+    main_deletion_queue.push_func([=]() {
+        vkDestroyImageView(device, draw_img.img_view, nullptr);
+        vmaDestroyImage(alloc, draw_img.img, draw_img.allocation);
+    });
 }
 
 void VulkanEngine::init_commands() {
@@ -163,6 +210,7 @@ void VulkanEngine::destroy_swapchain() {
 void VulkanEngine::cleanup() {
     if (is_init) {
         vkDeviceWaitIdle(device);
+        main_deletion_queue.flush();
 
         for (int i = 0; i < FRAME_OVERLAP; i++) {
             vkDestroyCommandPool(device, frames[i].command_pool, nullptr);
@@ -219,12 +267,13 @@ void VulkanEngine::run() {
 void VulkanEngine::draw() {
     VK_CHECK(vkWaitForFences(device, 1, &get_current_frame().render_fence, true,
                              1000000000));
+    get_current_frame().deletion_queue.flush();
     VK_CHECK(vkResetFences(device, 1, &get_current_frame().render_fence));
 
-    uint32_t swapchain_img_idx;
+    uint32_t swapchain_img_index;
     VK_CHECK(vkAcquireNextImageKHR(device, swapchain, 1000000000,
                                    get_current_frame().swapchain_semaphore,
-                                   nullptr, &swapchain_img_idx));
+                                   nullptr, &swapchain_img_index));
 
     VkCommandBuffer cmd = get_current_frame().main_command_buffer;
 
@@ -233,24 +282,24 @@ void VulkanEngine::draw() {
     VkCommandBufferBeginInfo cmd_begin_info = vkinit::command_buffer_begin_info(
         VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
+    draw_extent.width = draw_img.img_extent.width;
+    draw_extent.height = draw_img.img_extent.height;
+
     VK_CHECK(vkBeginCommandBuffer(cmd, &cmd_begin_info));
 
-    vkutil::transition_img(cmd, swapchain_imgs[swapchain_img_idx],
+    vkutil::transition_img(cmd, draw_img.img,
                            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
-    VkClearColorValue clear_val;
-    float flash = abs(sin(frame_num / 120.0f));
-    clear_val = {{0.0f, 0.0f, flash, 1.0f}};
+    draw_background(cmd);
 
-    VkImageSubresourceRange clear_range =
-        vkinit::image_subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
+    vkutil::transition_img(cmd, draw_img.img, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    vkutil::transition_img(cmd, swapchain_imgs[swapchain_img_index],
+                           VK_IMAGE_LAYOUT_UNDEFINED,
+                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-    vkCmdClearColorImage(cmd, swapchain_imgs[swapchain_img_idx],
-                         VK_IMAGE_LAYOUT_GENERAL, &clear_val, 1, &clear_range);
+    vkutil::copy_img_to_img(cmd, draw_img.img, swapchain_imgs[swapchain_img_index], draw_extent, swapchain_extent);
 
-    vkutil::transition_img(cmd, swapchain_imgs[swapchain_img_idx],
-                           VK_IMAGE_LAYOUT_GENERAL,
-                           VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    vkutil::transition_img(cmd, swapchain_imgs[swapchain_img_index], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     VK_CHECK(vkEndCommandBuffer(cmd));
 
@@ -279,9 +328,21 @@ void VulkanEngine::draw() {
     present_info.pWaitSemaphores = &get_current_frame().render_semaphore;
     present_info.waitSemaphoreCount = 1;
 
-    present_info.pImageIndices = &swapchain_img_idx;
+    present_info.pImageIndices = &swapchain_img_index;
 
     VK_CHECK(vkQueuePresentKHR(graphics_queue, &present_info));
 
     frame_num++;
+}
+
+void VulkanEngine::draw_background(VkCommandBuffer cmd) {
+    VkClearColorValue clear_val;
+    float flash = abs(sin(frame_num / 120.0f));
+    clear_val = {{0.0f, 0.0f, flash, 1.0f}};
+
+    VkImageSubresourceRange clear_range =
+        vkinit::image_subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
+
+    vkCmdClearColorImage(cmd, draw_img.img,
+                         VK_IMAGE_LAYOUT_GENERAL, &clear_val, 1, &clear_range);
 }

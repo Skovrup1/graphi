@@ -16,6 +16,9 @@
 
 #include <glm/mat4x4.hpp>
 #include <glm/vec4.hpp>
+#include <vulkan/vulkan_core.h>
+
+#include "vk_mem_alloc.h"
 
 #define VK_CHECK(x)                                                            \
     do {                                                                       \
@@ -25,3 +28,12 @@
             abort();                                                           \
         }                                                                      \
     } while (0)
+
+struct AllocactedImg {
+    VkImage img;
+    VkImageView img_view;
+    VmaAllocation allocation;
+    VkExtent3D img_extent;
+    VkFormat img_format;
+};
+

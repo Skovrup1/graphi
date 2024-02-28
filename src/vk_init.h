@@ -17,4 +17,6 @@ VkImageSubresourceRange image_subresource_range(VkImageAspectFlags aspect_mask);
 VkSemaphoreSubmitInfo semaphore_submit_info(VkPipelineStageFlags2 stage_mask, VkSemaphore semaphore);
 VkCommandBufferSubmitInfo command_buffer_submit_info(VkCommandBuffer cmd);
 VkSubmitInfo2 submit_info(VkCommandBufferSubmitInfo* cmd, VkSemaphoreSubmitInfo* signal_semaphore, VkSemaphoreSubmitInfo* wait_semaphore_info);
+VkImageCreateInfo img_create_info(VkFormat format, VkImageUsageFlags usage_flags, VkExtent3D extent);
+VkImageViewCreateInfo img_view_create_info(VkFormat format, VkImage img, VkImageAspectFlags aspect_flags);
 }; // namespace vkinit

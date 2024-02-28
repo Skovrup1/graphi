@@ -1,8 +1,27 @@
 #pragma once
 
+#include "vk_mem_alloc.h"
 #include "vk_types.h"
-#include <vector>
+#include <functional>
 #include <vulkan/vulkan_core.h>
+
+struct DeletionQueue { 
+    std::deque<std::function<void()>> deletors;
+
+    void push_func(std::function<void()>&& func) {
+        deletors.push_back(func);
+    }
+
+    // functions callbacks are inefficient but this will be ok for now
+    void flush() {
+        for (auto iter = deletors.rbegin(); iter != deletors.rend(); iter++) {
+            // call the function
+            (*iter)();
+        }
+
+        deletors.clear();
+    }
+};
 
 struct FrameData {
     VkCommandPool command_pool;
@@ -10,6 +29,7 @@ struct FrameData {
     VkSemaphore swapchain_semaphore;
     VkSemaphore render_semaphore;
     VkFence render_fence;
+    DeletionQueue deletion_queue;
 };
 
 constexpr unsigned int FRAME_OVERLAP = 2;
@@ -19,6 +39,7 @@ class VulkanEngine {
     bool is_init{false};
     int frame_num{0};
     bool stop_rendering{false};
+    DeletionQueue main_deletion_queue;
     VkExtent2D window_extent{1700, 900};
     struct SDL_Window *window{nullptr};
     VkInstance instance;
@@ -37,6 +58,9 @@ class VulkanEngine {
     };
     VkQueue graphics_queue;
     uint32_t graphics_queue_family;
+    VmaAllocator alloc;
+    AllocactedImg draw_img;
+    VkExtent2D draw_extent;
 
     static VulkanEngine &Get();
     void init();
@@ -51,4 +75,5 @@ class VulkanEngine {
     void init_sync_structures();
     void create_swapchain(uint32_t width, uint32_t height);
     void destroy_swapchain();
+    void draw_background(VkCommandBuffer cmd);
 };
