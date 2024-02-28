@@ -8,7 +8,7 @@
 #include "vk-bootstrap/src/VkBootstrap.h"
 
 #define VMA_IMPLEMENTATION
-#include "vk_mem_alloc.h"
+#include "vma/include/vk_mem_alloc.h"
 #include "vk_util.h"
 #include "vk_init.h"
 #include "vk_types.h"

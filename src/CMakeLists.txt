@@ -11,6 +11,7 @@ add_subdirectory(vk-bootstrap)
 add_subdirectory(sdl)
 add_subdirectory(fmt)
 add_subdirectory(glm)
+add_subdirectory(vma)
 
 # additional info to find vulkan on windows
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
@@ -29,7 +30,6 @@ add_executable(
     vk_init.h
     vk_util.cpp
     vk_util.h
-    vk_mem_alloc.h
     stb_image.h
     tiny_obj_loader.h
 )
@@ -41,5 +41,6 @@ target_link_libraries(
     Vulkan::Vulkan
     glm::glm
     vk-bootstrap::vk-bootstrap
+    GPUOpen::VulkanMemoryAllocator
 )
 
