@@ -4,6 +4,7 @@
 #include <SDL2/SDL_video.h>
 #include <SDL2/SDL_vulkan.h>
 
+#include <fmt/core.h>
 #include <thread>
 #include <vulkan/vulkan_core.h>
 
@@ -277,6 +278,7 @@ void VulkanEngine::draw() {
         resize_requested = true;
         return;
     }
+    fmt::println("hello{}", swapchain_img_index);
 
     VkCommandBuffer cmd = get_current_frame().main_command_buffer;
 
