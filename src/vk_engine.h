@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vk_types.h"
+#include "vk_descriptors.h"
 
 struct DeletionQueue {
     std::deque<std::function<void()>> deletors;
@@ -57,6 +58,9 @@ class VulkanEngine {
     VmaAllocator alloc;
     AllocactedImg draw_img;
     VkExtent2D draw_extent;
+    DescriptorAllocator global_descriptor_allocator;
+    VkDescriptorSet draw_img_descriptor;
+    VkDescriptorSetLayout draw_img_descriptor_layout;
 
     static VulkanEngine &Get();
     void init();
@@ -69,7 +73,8 @@ class VulkanEngine {
     void init_swapchain();
     void init_commands();
     void init_sync_structures();
-    void resize_swapchain(); 
+    void init_descriptors();
+    void resize_swapchain();
     void create_swapchain(uint32_t width, uint32_t height);
     void destroy_swapchain();
     void draw_background(VkCommandBuffer cmd);

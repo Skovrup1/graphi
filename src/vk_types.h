@@ -6,8 +6,10 @@
 #include <memory>
 #include <optional>
 #include <span>
+#include <thread>
 #include <string>
 #include <vector>
+#include <cstdint>
 
 #include <vulkan/vk_enum_string_helper.h>
 #include <vulkan/vulkan.h>
@@ -24,7 +26,7 @@
     do {                                                                       \
         VkResult err = x;                                                      \
         if (err) {                                                             \
-            fmt::println("Detected Vulkan error: {}, on line {}", string_VkResult(err), __LINE__);     \
+            fmt::println("Detected Vulkan error: {}. Line: {}", string_VkResult(err), __LINE__);     \
             abort();                                                           \
         }                                                                      \
     } while (0)

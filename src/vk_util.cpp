@@ -2,8 +2,9 @@
 #include "vk_init.h"
 #include <vulkan/vulkan_core.h>
 
-void vkutil::transition_img(VkCommandBuffer cmd, VkImage img, VkImageLayout curr_layout,
-                    VkImageLayout new_layout) {
+void vkutil::transition_img(VkCommandBuffer cmd, VkImage img,
+                            VkImageLayout curr_layout,
+                            VkImageLayout new_layout) {
     VkImageMemoryBarrier2 img_barrier{
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2};
     img_barrier.pNext = nullptr;
@@ -37,10 +38,11 @@ void vkutil::transition_img(VkCommandBuffer cmd, VkImage img, VkImageLayout curr
     vkCmdPipelineBarrier2(cmd, &dep_info);
 }
 
-
 // vkCmdCopyImage is faster but more restricted
-void vkutil::copy_img_to_img(VkCommandBuffer cmd, VkImage src, VkImage dst, VkExtent2D src_size, VkExtent2D dst_size) {
-    VkImageBlit2 blit_region{ .sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2, .pNext = nullptr};
+void vkutil::copy_img_to_img(VkCommandBuffer cmd, VkImage src, VkImage dst,
+                             VkExtent2D src_size, VkExtent2D dst_size) {
+    VkImageBlit2 blit_region{.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2,
+                             .pNext = nullptr};
     blit_region.srcOffsets[1].x = src_size.width;
     blit_region.srcOffsets[1].y = src_size.height;
     blit_region.srcOffsets[1].z = 1;
@@ -59,7 +61,8 @@ void vkutil::copy_img_to_img(VkCommandBuffer cmd, VkImage src, VkImage dst, VkEx
     blit_region.dstSubresource.layerCount = 1;
     blit_region.dstSubresource.mipLevel = 0;
 
-    VkBlitImageInfo2 blit_info{ .sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2, .pNext = nullptr };
+    VkBlitImageInfo2 blit_info{.sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2,
+                               .pNext = nullptr};
     blit_info.srcImage = src;
     blit_info.srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
     blit_info.dstImage = dst;

@@ -4,19 +4,16 @@
 #include <SDL2/SDL_video.h>
 #include <SDL2/SDL_vulkan.h>
 
-#include <fmt/core.h>
-#include <thread>
-#include <vulkan/vulkan_core.h>
-
 #include "vk-bootstrap/src/VkBootstrap.h"
 
 #define VMA_IMPLEMENTATION
 #include "vma/include/vk_mem_alloc.h"
-#include "vk_util.h"
 #include "vk_init.h"
 #include "vk_types.h"
+#include "vk_util.h"
+#include "vk_descriptors.h"
 
-constexpr bool use_validation_layers = false;
+constexpr bool use_validation_layers = true;
 VulkanEngine *loaded_engine = nullptr;
 
 VulkanEngine &VulkanEngine::Get() { return *loaded_engine; }
@@ -26,7 +23,8 @@ void VulkanEngine::init() {
     loaded_engine = this;
 
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
+    SDL_WindowFlags window_flags =
+        (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
 
     window = SDL_CreateWindow("Graphi engine", SDL_WINDOWPOS_UNDEFINED,
                               SDL_WINDOWPOS_UNDEFINED, window_extent.width,
@@ -38,6 +36,8 @@ void VulkanEngine::init() {
     init_commands();
 
     init_sync_structures();
+
+    init_descriptors();
 
     is_init = true;
 }
@@ -138,9 +138,7 @@ void VulkanEngine::init_swapchain() {
     });
 }
 
-void VulkanEngine::resize_swapchain() {
-
-}
+void VulkanEngine::resize_swapchain() {}
 
 void VulkanEngine::init_commands() {
     VkCommandPoolCreateInfo command_pool_info =
@@ -177,6 +175,21 @@ void VulkanEngine::init_sync_structures() {
     }
 }
 
+
+void VulkanEngine::init_descriptors() {
+    std::vector<DescriptorAllocator::PoolSizeRatio> sizes = {
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 }
+    };
+
+    global_descriptor_allocator.init_pool(device, 10, sizes);
+
+    {
+        DescriptorLayoutBuilder builder;
+        builder.add_binding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+        draw_img_descriptor_layout = builder.build(device, VK_SHADER_STAGE_COMPUTE_BIT);
+    }
+}
+
 void VulkanEngine::create_swapchain(uint32_t width, uint32_t height) {
     vkb::SwapchainBuilder swapchain_builder{active_gpu, device, surface};
 
@@ -184,10 +197,11 @@ void VulkanEngine::create_swapchain(uint32_t width, uint32_t height) {
 
     vkb::Swapchain vkb_swapchain =
         swapchain_builder
-            .set_desired_format(VkSurfaceFormatKHR{
-                .format = swapchain_img_format,
-                .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR})
-            .set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
+            .use_default_format_selection()
+            // .set_desired_format(VkSurfaceFormatKHR{
+            // .format = swapchain_img_format,
+            // .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR})
+            .set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR)
             .set_desired_extent(width, height)
             .add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT)
             .build()
@@ -271,9 +285,9 @@ void VulkanEngine::draw() {
     VK_CHECK(vkResetFences(device, 1, &get_current_frame().render_fence));
 
     uint32_t swapchain_img_index;
-    VkResult err = vkAcquireNextImageKHR(device, swapchain, 1000000000,
-                                   get_current_frame().swapchain_semaphore,
-                                   nullptr, &swapchain_img_index);
+    VkResult err = vkAcquireNextImageKHR(
+        device, swapchain, 1000000000, get_current_frame().swapchain_semaphore,
+        nullptr, &swapchain_img_index);
     if (err != VK_SUCCESS) {
         resize_requested = true;
         return;
@@ -292,19 +306,24 @@ void VulkanEngine::draw() {
 
     VK_CHECK(vkBeginCommandBuffer(cmd, &cmd_begin_info));
 
-    vkutil::transition_img(cmd, draw_img.img,
-                           VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+    vkutil::transition_img(cmd, draw_img.img, VK_IMAGE_LAYOUT_UNDEFINED,
+                           VK_IMAGE_LAYOUT_GENERAL);
 
     draw_background(cmd);
 
-    vkutil::transition_img(cmd, draw_img.img, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    vkutil::transition_img(cmd, draw_img.img, VK_IMAGE_LAYOUT_GENERAL,
+                           VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
     vkutil::transition_img(cmd, swapchain_imgs[swapchain_img_index],
                            VK_IMAGE_LAYOUT_UNDEFINED,
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-    vkutil::copy_img_to_img(cmd, draw_img.img, swapchain_imgs[swapchain_img_index], draw_extent, swapchain_extent);
+    vkutil::copy_img_to_img(cmd, draw_img.img,
+                            swapchain_imgs[swapchain_img_index], draw_extent,
+                            swapchain_extent);
 
-    vkutil::transition_img(cmd, swapchain_imgs[swapchain_img_index], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    vkutil::transition_img(cmd, swapchain_imgs[swapchain_img_index],
+                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                           VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     VK_CHECK(vkEndCommandBuffer(cmd));
 
@@ -339,7 +358,6 @@ void VulkanEngine::draw() {
     if (err_p != VK_SUCCESS) {
         resize_requested = true;
     }
-    
 
     frame_num++;
 }
@@ -352,6 +370,6 @@ void VulkanEngine::draw_background(VkCommandBuffer cmd) {
     VkImageSubresourceRange clear_range =
         vkinit::image_subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
 
-    vkCmdClearColorImage(cmd, draw_img.img,
-                         VK_IMAGE_LAYOUT_GENERAL, &clear_val, 1, &clear_range);
+    vkCmdClearColorImage(cmd, draw_img.img, VK_IMAGE_LAYOUT_GENERAL, &clear_val,
+                         1, &clear_range);
 }
