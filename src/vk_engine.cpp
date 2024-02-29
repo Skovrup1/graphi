@@ -1,9 +1,11 @@
 #include "vk_engine.h"
 
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_video.h>
 #include <SDL2/SDL_vulkan.h>
 
 #include <thread>
+#include <vulkan/vulkan_core.h>
 
 #include "vk-bootstrap/src/VkBootstrap.h"
 
@@ -13,7 +15,7 @@
 #include "vk_init.h"
 #include "vk_types.h"
 
-const bool use_validation_layers = true;
+constexpr bool use_validation_layers = false;
 VulkanEngine *loaded_engine = nullptr;
 
 VulkanEngine &VulkanEngine::Get() { return *loaded_engine; }
@@ -23,7 +25,7 @@ void VulkanEngine::init() {
     loaded_engine = this;
 
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
+    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
 
     window = SDL_CreateWindow("Graphi engine", SDL_WINDOWPOS_UNDEFINED,
                               SDL_WINDOWPOS_UNDEFINED, window_extent.width,
@@ -133,6 +135,10 @@ void VulkanEngine::init_swapchain() {
         vkDestroyImageView(device, draw_img.img_view, nullptr);
         vmaDestroyImage(alloc, draw_img.img, draw_img.allocation);
     });
+}
+
+void VulkanEngine::resize_swapchain() {
+
 }
 
 void VulkanEngine::init_commands() {
@@ -264,9 +270,13 @@ void VulkanEngine::draw() {
     VK_CHECK(vkResetFences(device, 1, &get_current_frame().render_fence));
 
     uint32_t swapchain_img_index;
-    VK_CHECK(vkAcquireNextImageKHR(device, swapchain, 1000000000,
+    VkResult err = vkAcquireNextImageKHR(device, swapchain, 1000000000,
                                    get_current_frame().swapchain_semaphore,
-                                   nullptr, &swapchain_img_index));
+                                   nullptr, &swapchain_img_index);
+    if (err != VK_SUCCESS) {
+        resize_requested = true;
+        return;
+    }
 
     VkCommandBuffer cmd = get_current_frame().main_command_buffer;
 
@@ -323,7 +333,11 @@ void VulkanEngine::draw() {
 
     present_info.pImageIndices = &swapchain_img_index;
 
-    VK_CHECK(vkQueuePresentKHR(graphics_queue, &present_info));
+    VkResult err_p = vkQueuePresentKHR(graphics_queue, &present_info);
+    if (err_p != VK_SUCCESS) {
+        resize_requested = true;
+    }
+    
 
     frame_num++;
 }

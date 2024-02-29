@@ -32,6 +32,7 @@ constexpr unsigned int FRAME_OVERLAP = 2;
 class VulkanEngine {
   public:
     bool is_init{false};
+    bool resize_requested{false};
     int frame_num{0};
     bool stop_rendering{false};
     DeletionQueue main_deletion_queue;
@@ -68,7 +69,9 @@ class VulkanEngine {
     void init_swapchain();
     void init_commands();
     void init_sync_structures();
+    void resize_swapchain(); 
     void create_swapchain(uint32_t width, uint32_t height);
     void destroy_swapchain();
     void draw_background(VkCommandBuffer cmd);
+
 };
