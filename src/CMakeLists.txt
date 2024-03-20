@@ -27,6 +27,8 @@ add_executable(
     vk_util.h
     vk_descriptors.h
     vk_descriptors.cpp
+    vk_pipelines.h
+    vk_pipelines.cpp
     stb_image.h
     tiny_obj_loader.h
     )
@@ -39,12 +41,17 @@ target_link_libraries(
     glm::glm
     vk-bootstrap::vk-bootstrap
     GPUOpen::VulkanMemoryAllocator
+    m
     )
 
 include(CMakePrintHelpers)
-cmake_print_variables(PROJECT_SOURCE_DIR)
 
-find_program(GLSL_VALIDATOR glslangValidator HINTS /usr/bin /usr/local/bin $ENV{VULKAN_SDK}/Bin/ $ENV{VULKAN_SDK}/Bin32/)
+find_program(GLSL_VALIDATOR glslangValidator HINTS 
+    /usr/bin
+    /usr/local/bin
+    $ENV{VULKAN_SDK}/Bin/
+    $ENV{VULKAN_SDK}/Bin32/
+    REQUIRED)
 
 file(GLOB_RECURSE GLSL_SOURCE_FILES
     "${PROJECT_SOURCE_DIR}/../shaders/*.frag"
@@ -65,7 +72,7 @@ foreach(GLSL ${GLSL_SOURCE_FILES})
 endforeach(GLSL)
 
 add_custom_target(
-    Shaders 
+    Shaders
     DEPENDS ${SPIRV_BINARY_FILES}
     )
 
