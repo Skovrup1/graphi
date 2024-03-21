@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vk_types.h"
+#include <span>
 
 struct DescriptorLayoutBuilder {
     std::vector<VkDescriptorSetLayoutBinding> bindings;
