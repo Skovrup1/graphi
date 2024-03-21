@@ -18,6 +18,7 @@ add_subdirectory(glm)
 add_subdirectory(vma)
 
 find_package(Vulkan REQUIRED)
+find_package(M REQUIRED)
 
 add_executable(
     main
