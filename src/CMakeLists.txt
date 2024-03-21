@@ -18,7 +18,6 @@ add_subdirectory(glm)
 add_subdirectory(vma)
 
 find_package(Vulkan REQUIRED)
-find_package(M REQUIRED)
 
 add_executable(
     main
@@ -26,10 +25,10 @@ add_executable(
     vk_engine.cpp
     vk_engine.h
     vk_types.h
-    vk_init.cpp
     vk_init.h
-    vk_util.cpp
+    vk_init.cpp
     vk_util.h
+    vk_util.cpp
     vk_descriptors.h
     vk_descriptors.cpp
     vk_pipelines.h
@@ -46,8 +45,14 @@ target_link_libraries(
     glm::glm
     vk-bootstrap::vk-bootstrap
     GPUOpen::VulkanMemoryAllocator
-    m
     )
+
+IF (NOT WIN32)
+    target_link_libraries(
+        main
+        m
+        )
+ENDIF()
 
 include(CMakePrintHelpers)
 

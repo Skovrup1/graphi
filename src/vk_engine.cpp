@@ -205,6 +205,7 @@ void VulkanEngine::init_descriptors() {
     draw_img_write.pNext = nullptr;
 
     draw_img_write.dstBinding = 0;
+    draw_img_write.dstSet = draw_img_descriptors;
     draw_img_write.descriptorCount = 1;
     draw_img_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     draw_img_write.pImageInfo = &img_info;
