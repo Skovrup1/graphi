@@ -226,7 +226,7 @@ void VulkanEngine::init_background_pipelines() {
                                     &gradient_pipeline_layout));
 
     VkShaderModule compute_draw_shader;
-    if (!vkutil::loader_shader_module("../shaders/gradient.comp.spv", device,
+    if (!vkutil::loader_shader_module("shaders/gradient.comp.spv", device,
                                       &compute_draw_shader)) {
         fmt::print("Error when building the compute shader\n");
     }
@@ -359,7 +359,6 @@ void VulkanEngine::draw() {
         resize_requested = true;
         return;
     }
-    fmt::println("hello{}", swapchain_img_index);
 
     VkCommandBuffer cmd = get_current_frame().main_command_buffer;
 
@@ -440,6 +439,8 @@ void VulkanEngine::draw_background(VkCommandBuffer cmd) {
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, gradient_pipeline);
 
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, gradient_pipeline_layout, 0, 1, &draw_img_descriptors, 0, nullptr);
+
+    vkCmdDispatch(cmd, std::ceil(draw_extent.width / 16.0), std::ceil(draw_extent.height / 16.0), 1);
     //vkCmdClearColorImage(cmd, draw_img.img, VK_IMAGE_LAYOUT_GENERAL, &clear_val,
     //                    1, &clear_range);
 }
