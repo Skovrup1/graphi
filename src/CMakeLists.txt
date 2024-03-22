@@ -37,6 +37,25 @@ add_executable(
     tiny_obj_loader.h
     )
 
+add_library(imgui STATIC)
+
+target_include_directories(imgui PUBLIC imgui)
+
+target_sources(imgui PRIVATE
+    imgui/imgui.h
+    imgui/imgui.cpp
+
+    imgui/imgui_demo.cpp
+    imgui/imgui_draw.cpp
+    imgui/imgui_widgets.cpp
+    imgui/imgui_tables.cpp
+
+    imgui/backends/imgui_impl_vulkan.cpp
+    imgui/backends/imgui_impl_sdl2.cpp
+    )
+
+target_link_libraries(imgui PUBLIC Vulkan::Vulkan SDL2::SDL2)
+
 target_link_libraries(
     main
     SDL2::SDL2
@@ -45,6 +64,7 @@ target_link_libraries(
     glm::glm
     vk-bootstrap::vk-bootstrap
     GPUOpen::VulkanMemoryAllocator
+    imgui
     )
 
 IF (NOT WIN32)

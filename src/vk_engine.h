@@ -63,12 +63,16 @@ class VulkanEngine {
     VkDescriptorSetLayout draw_img_descriptor_layout;
     VkPipeline gradient_pipeline;
     VkPipelineLayout gradient_pipeline_layout;
+    VkFence imm_fence;
+    VkCommandBuffer imm_command_buffer;
+    VkCommandPool imm_command_pool;
 
     static VulkanEngine &Get();
     void init();
     void cleanup();
     void draw();
     void run();
+    void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 
   private:
     void init_vulkan();
@@ -78,6 +82,7 @@ class VulkanEngine {
     void init_descriptors();
     void init_pipelines();
     void init_background_pipelines();
+    void init_imgui();
     void resize_swapchain();
     void create_swapchain(uint32_t width, uint32_t height);
     void destroy_swapchain();
