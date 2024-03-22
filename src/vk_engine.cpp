@@ -410,13 +410,24 @@ void VulkanEngine::run() {
                     break;
                 }
             }
+
+            ImGui_ImplSDL2_ProcessEvent(&e);
         }
 
         if (stop_rendering) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        } else {
-            draw();
+            continue; //skip drawing
         }
+
+        ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplSDL2_NewFrame(window);
+        ImGui::NewFrame();
+
+        ImGui::ShowDemoWindow();
+
+        ImGui::Render();
+
+        draw();
     }
 }
 
@@ -520,6 +531,17 @@ void VulkanEngine::draw_background(VkCommandBuffer cmd) {
 
     vkCmdDispatch(cmd, std::ceil(draw_extent.width / 16.0),
                   std::ceil(draw_extent.height / 16.0), 1);
+}
+
+void VulkanEngine::draw_imgui(VkCommandBuffer cmd, VkImageView target_image_view) {
+    VkRenderingAttachmentInfo color_attachment = vkinit::attachment_info(target_image_view, nullptr, VK_IMAGE_LAYOUT_GENERAL);
+    VkRenderingInfo render_info = vkinit::rendering_info(swapchain_extent, &color_attachment, nullptr);
+
+    vkCmdBeginRendering(cmd, &render_info);
+
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
+
+    vkCmdEndRendering(cmd);
 }
 
 void VulkanEngine::immediate_submit(

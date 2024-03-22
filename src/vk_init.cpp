@@ -119,7 +119,9 @@ VkSubmitInfo2 vkinit::submit_info(VkCommandBufferSubmitInfo *cmd,
     return info;
 }
 
-VkImageCreateInfo vkinit::img_create_info(VkFormat format, VkImageUsageFlags usage_flags, VkExtent3D extent) {
+VkImageCreateInfo vkinit::img_create_info(VkFormat format,
+                                          VkImageUsageFlags usage_flags,
+                                          VkExtent3D extent) {
     VkImageCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     info.pNext = nullptr;
@@ -129,7 +131,7 @@ VkImageCreateInfo vkinit::img_create_info(VkFormat format, VkImageUsageFlags usa
     info.extent = extent;
     info.mipLevels = 1;
     info.arrayLayers = 1;
-    //for MSAA, turned off
+    // for MSAA, turned off
     info.samples = VK_SAMPLE_COUNT_1_BIT;
     info.tiling = VK_IMAGE_TILING_OPTIMAL;
     info.usage = usage_flags;
@@ -137,7 +139,9 @@ VkImageCreateInfo vkinit::img_create_info(VkFormat format, VkImageUsageFlags usa
     return info;
 }
 
-VkImageViewCreateInfo vkinit::img_view_create_info(VkFormat format, VkImage img, VkImageAspectFlags aspect_flags) {
+VkImageViewCreateInfo
+vkinit::img_view_create_info(VkFormat format, VkImage img,
+                             VkImageAspectFlags aspect_flags) {
     VkImageViewCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     info.pNext = nullptr;
@@ -154,3 +158,39 @@ VkImageViewCreateInfo vkinit::img_view_create_info(VkFormat format, VkImage img,
     return info;
 }
 
+VkRenderingAttachmentInfo vkinit::attachment_info(VkImageView view,
+                                                  VkClearValue *clear,
+                                                  VkImageLayout layout) {
+    VkRenderingAttachmentInfo color_attachment{};
+    color_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+    color_attachment.pNext = nullptr;
+
+    color_attachment.imageView = view;
+    color_attachment.imageLayout = layout;
+    color_attachment.loadOp =
+        clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+    color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    if (clear) {
+        color_attachment.clearValue = *clear;
+    }
+
+    return color_attachment;
+}
+
+VkRenderingInfo
+vkinit::rendering_info(VkExtent2D render_extent,
+                       VkRenderingAttachmentInfo *color_attachment,
+                       VkRenderingAttachmentInfo *depth_attachment) {
+    VkRenderingInfo render_info{};
+    render_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+    render_info.pNext = nullptr;
+    render_info.renderArea =
+        VkRect2D{VkRect2D{VkOffset2D{0, 0}, render_extent}};
+    render_info.layerCount = 1;
+    render_info.colorAttachmentCount = 1;
+    render_info.pColorAttachments = color_attachment;
+    render_info.pDepthAttachment = depth_attachment;
+    render_info.pStencilAttachment = nullptr;
+
+    return render_info;
+}
