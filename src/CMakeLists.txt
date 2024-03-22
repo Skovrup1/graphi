@@ -2,15 +2,13 @@ cmake_minimum_required(VERSION 3.20)
 
 project(graphi VERSION 0.0.0 LANGUAGES C CXX)
 
-# for clang-tidy
-set(CMAKE_EXPORT_COMPILE_COMMANDS)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nullability-completeness")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nullability-completeness")
 
-include_directories(imgui imgui/backends)
 add_subdirectory(vk-bootstrap)
 add_subdirectory(sdl)
 add_subdirectory(fmt)
@@ -37,6 +35,16 @@ add_executable(
     tiny_obj_loader.h
     )
 
+target_include_directories(main PUBLIC 
+    sdl
+    imgui
+    imgui/backends
+    vma/include
+    vk-bootstrap/src
+    )
+
+
+# IMGUI
 add_library(imgui STATIC)
 
 target_include_directories(imgui PUBLIC imgui)
@@ -76,7 +84,7 @@ ENDIF()
 
 include(CMakePrintHelpers)
 
-find_program(GLSL_VALIDATOR glslangValidator HINTS 
+find_program(GLSL_VALIDATOR glslangValidator HINTS
     /usr/bin
     /usr/local/bin
     $ENV{VULKAN_SDK}/Bin/
