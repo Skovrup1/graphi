@@ -470,8 +470,20 @@ void VulkanEngine::run() {
         ImGui_ImplSDL2_NewFrame(window);
         ImGui::NewFrame();
 
-        ImGui::ShowDemoWindow();
+        if (ImGui::Begin("background")) {
+            ComputeEffect& selected = background_effects[current_background_effect];
 
+            ImGui::Text("Selected effect: %s", selected.name);
+
+            ImGui::SliderInt("Effect Index", &current_background_effect, 0, background_effects.size() - 1);
+
+            ImGui::InputFloat4("data1", (float*)& selected.data.data1);
+            ImGui::InputFloat4("data2", (float*)& selected.data.data2);
+            ImGui::InputFloat4("data3", (float*)& selected.data.data3);
+            ImGui::InputFloat4("data4", (float*)& selected.data.data4);
+
+            ImGui::End();
+        }
         ImGui::Render();
 
         draw();
