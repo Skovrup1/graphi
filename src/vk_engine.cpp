@@ -480,7 +480,7 @@ void VulkanEngine::run() {
 
 void VulkanEngine::draw() {
     VK_CHECK(vkWaitForFences(device, 1, &get_current_frame().render_fence,
-                             true, // this timeouts every time
+                             true,
                              1000000000));
 
     get_current_frame().deletion_queue.flush();
@@ -493,11 +493,6 @@ void VulkanEngine::draw() {
         resize_requested = true;
         return;
     }
-
-    // draw_extent.width = std::min(swapchain_extent.width,
-    // draw_img.img_extent.width) * render_scale; draw_extent.height =
-    // std::min(swapchain_extent.height, draw_img.img_extent.height) *
-    // render_scale;
 
     VK_CHECK(vkResetFences(device, 1, &get_current_frame().render_fence));
 
