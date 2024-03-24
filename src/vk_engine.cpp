@@ -48,6 +48,8 @@ void VulkanEngine::init() {
 
     init_pipelines();
 
+    init_imgui();
+
     is_init = true;
 }
 
@@ -87,18 +89,20 @@ void VulkanEngine::init_imgui() {
     init_info.Queue = graphics_queue;
     init_info.DescriptorPool = imgui_pool;
     init_info.MinImageCount = 3;
+    init_info.ImageCount = 3;
     init_info.UseDynamicRendering = true;
     init_info.ColorAttachmentFormat = swapchain_img_format;
 
     init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
     ImGui_ImplVulkan_Init(&init_info, VK_NULL_HANDLE);
+
     immediate_submit(
         [&](VkCommandBuffer cmd) { ImGui_ImplVulkan_CreateFontsTexture(cmd); });
 
     ImGui_ImplVulkan_DestroyFontUploadObjects();
 
-    main_deletion_queue.push_func([=]() {
+    main_deletion_queue.push_func([=, this]() {
         vkDestroyDescriptorPool(device, imgui_pool, nullptr);
         ImGui_ImplVulkan_Shutdown();
     });
@@ -229,8 +233,9 @@ void VulkanEngine::init_commands() {
     VK_CHECK(
         vkAllocateCommandBuffers(device, &cmd_alloc_info, &imm_command_buffer));
 
-    main_deletion_queue.push_func(
-        [=]() { vkDestroyCommandPool(device, imm_command_pool, nullptr); });
+    main_deletion_queue.push_func([=, this]() {
+        vkDestroyCommandPool(device, imm_command_pool, nullptr);
+    });
 }
 
 void VulkanEngine::init_sync_structures() {
@@ -252,7 +257,7 @@ void VulkanEngine::init_sync_structures() {
     // immediate submit
     VK_CHECK(vkCreateFence(device, &fence_create_info, nullptr, &imm_fence));
     main_deletion_queue.push_func(
-        [=]() { vkDestroyFence(device, imm_fence, nullptr); });
+        [=, this]() { vkDestroyFence(device, imm_fence, nullptr); });
 }
 
 void VulkanEngine::init_descriptors() {
@@ -297,6 +302,14 @@ void VulkanEngine::init_background_pipelines() {
     compute_layout.pSetLayouts = &draw_img_descriptor_layout;
     compute_layout.setLayoutCount = 1;
 
+    VkPushConstantRange push_constant{};
+    push_constant.offset = 0;
+    push_constant.size = sizeof(ComputePushConstants);
+    push_constant.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+    compute_layout.pPushConstantRanges = &push_constant;
+    compute_layout.pushConstantRangeCount = 1;
+
     VK_CHECK(vkCreatePipelineLayout(device, &compute_layout, nullptr,
                                     &gradient_pipeline_layout));
 
@@ -340,9 +353,9 @@ void VulkanEngine::create_swapchain(uint32_t width, uint32_t height) {
     vkb::Swapchain vkb_swapchain =
         swapchain_builder
             .use_default_format_selection()
-            // .set_desired_format(VkSurfaceFormatKHR{
-            // .format = swapchain_img_format,
-            // .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR})
+            .set_desired_format(VkSurfaceFormatKHR{
+                .format = swapchain_img_format,
+                .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR})
             .set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR)
             .set_desired_extent(width, height)
             .add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT)
@@ -416,7 +429,7 @@ void VulkanEngine::run() {
 
         if (stop_rendering) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            continue; //skip drawing
+            continue; // skip drawing
         }
 
         ImGui_ImplVulkan_NewFrame();
@@ -476,6 +489,12 @@ void VulkanEngine::draw() {
 
     vkutil::transition_img(cmd, swapchain_imgs[swapchain_img_index],
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                           VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+    draw_imgui(cmd, swapchain_img_views[swapchain_img_index]);
+
+    vkutil::transition_img(cmd, swapchain_imgs[swapchain_img_index],
+                           VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     VK_CHECK(vkEndCommandBuffer(cmd));
@@ -516,12 +535,12 @@ void VulkanEngine::draw() {
 }
 
 void VulkanEngine::draw_background(VkCommandBuffer cmd) {
-    VkClearColorValue clear_val;
-    float flash = abs(sin(frame_num / 120.0f));
-    clear_val = {{0.0f, 0.0f, flash, 1.0f}};
+    // VkClearColorValue clear_val;
+    // float flash = abs(sin(frame_num / 120.0f));
+    //  clear_val = {{0.0f, 0.0f, flash, 1.0f}};
 
-    VkImageSubresourceRange clear_range =
-        vkinit::image_subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
+    //    VkImageSubresourceRange clear_range =
+    //       vkinit::image_subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
 
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, gradient_pipeline);
 
@@ -529,13 +548,23 @@ void VulkanEngine::draw_background(VkCommandBuffer cmd) {
                             gradient_pipeline_layout, 0, 1,
                             &draw_img_descriptors, 0, nullptr);
 
+    ComputePushConstants pc;
+    pc.data1 = glm::vec4(1, 0, 0, 1);
+    pc.data2 = glm::vec4(0, 0, 1, 1);
+    vkCmdPushConstants(cmd, gradient_pipeline_layout,
+                       VK_SHADER_STAGE_COMPUTE_BIT, 0,
+                       sizeof(ComputePushConstants), &pc);
+
     vkCmdDispatch(cmd, std::ceil(draw_extent.width / 16.0),
                   std::ceil(draw_extent.height / 16.0), 1);
 }
 
-void VulkanEngine::draw_imgui(VkCommandBuffer cmd, VkImageView target_image_view) {
-    VkRenderingAttachmentInfo color_attachment = vkinit::attachment_info(target_image_view, nullptr, VK_IMAGE_LAYOUT_GENERAL);
-    VkRenderingInfo render_info = vkinit::rendering_info(swapchain_extent, &color_attachment, nullptr);
+void VulkanEngine::draw_imgui(VkCommandBuffer cmd,
+                              VkImageView target_image_view) {
+    VkRenderingAttachmentInfo color_attachment = vkinit::attachment_info(
+        target_image_view, nullptr, VK_IMAGE_LAYOUT_GENERAL);
+    VkRenderingInfo render_info =
+        vkinit::rendering_info(swapchain_extent, &color_attachment, nullptr);
 
     vkCmdBeginRendering(cmd, &render_info);
 
