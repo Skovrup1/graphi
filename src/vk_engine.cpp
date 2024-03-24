@@ -313,17 +313,23 @@ void VulkanEngine::init_background_pipelines() {
     VK_CHECK(vkCreatePipelineLayout(device, &compute_layout, nullptr,
                                     &gradient_pipeline_layout));
 
-    VkShaderModule compute_draw_shader;
+    VkShaderModule gradient_shader;
     if (!vkutil::loader_shader_module("shaders/gradient.comp.spv", device,
-                                      &compute_draw_shader)) {
-        fmt::print("Error when building the compute shader\n");
+                                      &gradient_shader)) {
+        fmt::print("Error when building the gradient shader\n");
+    }
+
+    VkShaderModule sky_shader;
+    if (!vkutil::loader_shader_module("shaders/sky.comp.spv", device,
+                                      &sky_shader)) {
+        fmt::print("Error when building the sky shader\n");
     }
 
     VkPipelineShaderStageCreateInfo stage_info = {};
     stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     stage_info.pNext = nullptr;
     stage_info.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-    stage_info.module = compute_draw_shader;
+    stage_info.module = gradient_shader;
     stage_info.pName = "main";
 
     VkComputePipelineCreateInfo compute_pipeline_create_info = {};
@@ -333,15 +339,44 @@ void VulkanEngine::init_background_pipelines() {
     compute_pipeline_create_info.layout = gradient_pipeline_layout;
     compute_pipeline_create_info.stage = stage_info;
 
+    ComputeEffect gradient;
+    gradient.layout = gradient_pipeline_layout;
+    gradient.name = "gradient";
+    gradient.data = {};
+
+    // default colors
+    gradient.data.data1 = glm::vec4(1, 0, 0, 1);
+    gradient.data.data2 = glm::vec4(0, 0, 1, 1);
+
     VK_CHECK(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1,
                                       &compute_pipeline_create_info, nullptr,
-                                      &gradient_pipeline));
+                                      &gradient.pipeline));
 
-    vkDestroyShaderModule(device, compute_draw_shader, nullptr);
+    compute_pipeline_create_info.stage.module = sky_shader;
+
+    ComputeEffect sky;
+    sky.layout = gradient_pipeline_layout;
+    sky.name = "sky";
+    sky.data = {};
+
+    // defaults
+    sky.data.data1 = glm::vec4(0.1, 0.2, 0.4, 0.97);
+
+    VK_CHECK(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1,
+                                      &compute_pipeline_create_info, nullptr,
+                                      &sky.pipeline));
+
+    background_effects.push_back(gradient);
+    background_effects.push_back(sky);
+
+    // cleanup
+    vkDestroyShaderModule(device, gradient_shader, nullptr);
+    vkDestroyShaderModule(device, sky_shader, nullptr);
 
     main_deletion_queue.push_func([&]() {
         vkDestroyPipelineLayout(device, gradient_pipeline_layout, nullptr);
-        vkDestroyPipeline(device, gradient_pipeline, nullptr);
+        vkDestroyPipeline(device, sky.pipeline, nullptr);
+        vkDestroyPipeline(device, gradient.pipeline, nullptr);
     });
 }
 
@@ -351,8 +386,7 @@ void VulkanEngine::create_swapchain(uint32_t width, uint32_t height) {
     swapchain_img_format = VK_FORMAT_B8G8R8A8_UNORM;
 
     vkb::Swapchain vkb_swapchain =
-        swapchain_builder
-            .use_default_format_selection()
+        swapchain_builder.use_default_format_selection()
             .set_desired_format(VkSurfaceFormatKHR{
                 .format = swapchain_img_format,
                 .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR})
@@ -448,8 +482,8 @@ void VulkanEngine::draw() {
     VK_CHECK(vkWaitForFences(device, 1, &get_current_frame().render_fence,
                              true, // this timeouts every time
                              1000000000));
+
     get_current_frame().deletion_queue.flush();
-    VK_CHECK(vkResetFences(device, 1, &get_current_frame().render_fence));
 
     uint32_t swapchain_img_index;
     VkResult err = vkAcquireNextImageKHR(
@@ -460,9 +494,16 @@ void VulkanEngine::draw() {
         return;
     }
 
-    VkCommandBuffer cmd = get_current_frame().main_command_buffer;
+    // draw_extent.width = std::min(swapchain_extent.width,
+    // draw_img.img_extent.width) * render_scale; draw_extent.height =
+    // std::min(swapchain_extent.height, draw_img.img_extent.height) *
+    // render_scale;
 
-    VK_CHECK(vkResetCommandBuffer(cmd, 0));
+    VK_CHECK(vkResetFences(device, 1, &get_current_frame().render_fence));
+
+    VK_CHECK(vkResetCommandBuffer(get_current_frame().main_command_buffer, 0));
+
+    VkCommandBuffer cmd = get_current_frame().main_command_buffer;
 
     VkCommandBufferBeginInfo cmd_begin_info = vkinit::command_buffer_begin_info(
         VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
@@ -527,7 +568,7 @@ void VulkanEngine::draw() {
     present_info.pImageIndices = &swapchain_img_index;
 
     VkResult err_p = vkQueuePresentKHR(graphics_queue, &present_info);
-    if (err_p != VK_SUCCESS) {
+    if (err_p != VK_SUCCESS) { // likely the source of linux vs windows bugs
         resize_requested = true;
     }
 
@@ -535,25 +576,17 @@ void VulkanEngine::draw() {
 }
 
 void VulkanEngine::draw_background(VkCommandBuffer cmd) {
-    // VkClearColorValue clear_val;
-    // float flash = abs(sin(frame_num / 120.0f));
-    //  clear_val = {{0.0f, 0.0f, flash, 1.0f}};
+    ComputeEffect &effect = background_effects[current_background_effect];
 
-    //    VkImageSubresourceRange clear_range =
-    //       vkinit::image_subresource_range(VK_IMAGE_ASPECT_COLOR_BIT);
-
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, gradient_pipeline);
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, effect.pipeline);
 
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE,
                             gradient_pipeline_layout, 0, 1,
                             &draw_img_descriptors, 0, nullptr);
 
-    ComputePushConstants pc;
-    pc.data1 = glm::vec4(1, 0, 0, 1);
-    pc.data2 = glm::vec4(0, 0, 1, 1);
     vkCmdPushConstants(cmd, gradient_pipeline_layout,
                        VK_SHADER_STAGE_COMPUTE_BIT, 0,
-                       sizeof(ComputePushConstants), &pc);
+                       sizeof(ComputePushConstants), &effect.data);
 
     vkCmdDispatch(cmd, std::ceil(draw_extent.width / 16.0),
                   std::ceil(draw_extent.height / 16.0), 1);

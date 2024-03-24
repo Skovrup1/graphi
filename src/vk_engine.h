@@ -26,6 +26,13 @@ struct ComputePushConstants {
     glm::vec4 data4;
 };
 
+struct ComputeEffect {
+    const char *name;
+    VkPipeline pipeline;
+    VkPipelineLayout layout;
+    ComputePushConstants data;
+};
+
 struct FrameData {
     VkCommandPool command_pool;
     VkCommandBuffer main_command_buffer;
@@ -68,18 +75,20 @@ class VulkanEngine {
     DescriptorAllocator global_descriptor_allocator;
     VkDescriptorSet draw_img_descriptors;
     VkDescriptorSetLayout draw_img_descriptor_layout;
-    VkPipeline gradient_pipeline;
+//    VkPipeline gradient_pipeline;
     VkPipelineLayout gradient_pipeline_layout;
     VkFence imm_fence;
     VkCommandBuffer imm_command_buffer;
     VkCommandPool imm_command_pool;
+    std::vector<ComputeEffect> background_effects;
+    int current_background_effect{0};
 
     static VulkanEngine &Get();
     void init();
     void cleanup();
     void draw();
     void run();
-    void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
+    void immediate_submit(std::function<void(VkCommandBuffer cmd)> &&function);
 
   private:
     void init_vulkan();
