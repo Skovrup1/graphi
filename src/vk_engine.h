@@ -82,6 +82,8 @@ class VulkanEngine {
     VkCommandPool imm_command_pool;
     std::vector<ComputeEffect> background_effects;
     int current_background_effect{0};
+    VkPipelineLayout triangle_pipeline_layout;
+    VkPipeline triangle_pipeline;
 
     static VulkanEngine &Get();
     void init();
@@ -99,9 +101,11 @@ class VulkanEngine {
     void init_pipelines();
     void init_background_pipelines();
     void init_imgui();
+    void init_triangle_pipeline();
     void resize_swapchain();
     void create_swapchain(uint32_t width, uint32_t height);
     void destroy_swapchain();
     void draw_background(VkCommandBuffer cmd);
     void draw_imgui(VkCommandBuffer cmd, VkImageView targetImageView);
+    void draw_geometry(VkCommandBuffer cmd);
 };

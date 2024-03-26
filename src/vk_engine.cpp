@@ -293,7 +293,9 @@ void VulkanEngine::init_descriptors() {
     vkUpdateDescriptorSets(device, 1, &draw_img_write, 0, nullptr);
 }
 
-void VulkanEngine::init_pipelines() { init_background_pipelines(); }
+void VulkanEngine::init_pipelines() {
+    init_triangle_pipeline();
+    init_background_pipelines(); }
 
 void VulkanEngine::init_background_pipelines() {
     VkPipelineLayoutCreateInfo compute_layout = {};
@@ -316,13 +318,13 @@ void VulkanEngine::init_background_pipelines() {
     VkShaderModule gradient_shader;
     if (!vkutil::loader_shader_module("shaders/gradient.comp.spv", device,
                                       &gradient_shader)) {
-        fmt::print("Error when building the gradient shader\n");
+        fmt::println("Error when building the gradient shader\n");
     }
 
     VkShaderModule sky_shader;
     if (!vkutil::loader_shader_module("shaders/sky.comp.spv", device,
                                       &sky_shader)) {
-        fmt::print("Error when building the sky shader\n");
+        fmt::println("Error when building the sky shader\n");
     }
 
     VkPipelineShaderStageCreateInfo stage_info = {};
@@ -377,6 +379,55 @@ void VulkanEngine::init_background_pipelines() {
         vkDestroyPipelineLayout(device, gradient_pipeline_layout, nullptr);
         vkDestroyPipeline(device, sky.pipeline, nullptr);
         vkDestroyPipeline(device, gradient.pipeline, nullptr);
+    });
+}
+
+void VulkanEngine::init_triangle_pipeline() {
+    VkShaderModule triangle_frag_shader;
+    if (!vkutil::loader_shader_module("shaders/colored_triangle.frag.spv",
+                                      device, &triangle_frag_shader)) {
+        fmt::println("Error when building the triangle fragment shader module");
+    } else {
+        fmt::println("Triangle fragment shader loaded");
+    }
+
+    VkShaderModule triangle_vertex_shader;
+    if (!vkutil::loader_shader_module("shaders/colored_triangle.vert.spv",
+                                      device, &triangle_vertex_shader)) {
+        fmt::println("Error when building the triangle vertex shader module");
+    } else {
+        fmt::println("Triangle vertex shader loaded");
+    }
+
+    VkPipelineLayoutCreateInfo pipeline_layout_info =
+        vkinit::pipeline_layout_create_info();
+    VK_CHECK(vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr,
+                                    &triangle_pipeline_layout));
+
+    PipelineBuilder pipeline_builder;
+    pipeline_builder.pipeline_layout = triangle_pipeline_layout;
+    pipeline_builder.set_shaders(triangle_vertex_shader, triangle_frag_shader);
+    pipeline_builder.set_input_topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+    pipeline_builder.set_polygon_mode(VK_POLYGON_MODE_FILL);
+    pipeline_builder.set_cull_mode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
+    pipeline_builder.set_multisampling_none();
+    pipeline_builder.disable_blending();
+    pipeline_builder.disable_depthtest();
+
+    pipeline_builder.set_color_attachment_format(draw_img.img_format);
+    pipeline_builder.set_depth_format(VK_FORMAT_UNDEFINED);
+
+    triangle_pipeline = pipeline_builder.build_pipeline(device);
+    if (triangle_pipeline == nullptr) {
+        fmt::println("nullptr detected");
+    }
+
+    vkDestroyShaderModule(device, triangle_frag_shader, nullptr);
+    vkDestroyShaderModule(device, triangle_vertex_shader, nullptr);
+
+    main_deletion_queue.push_func([&]() {
+        vkDestroyPipelineLayout(device, triangle_pipeline_layout, nullptr);
+        vkDestroyPipeline(device, triangle_pipeline, nullptr);
     });
 }
 
@@ -471,16 +522,18 @@ void VulkanEngine::run() {
         ImGui::NewFrame();
 
         if (ImGui::Begin("background")) {
-            ComputeEffect& selected = background_effects[current_background_effect];
+            ComputeEffect &selected =
+                background_effects[current_background_effect];
 
             ImGui::Text("Selected effect: %s", selected.name);
 
-            ImGui::SliderInt("Effect Index", &current_background_effect, 0, background_effects.size() - 1);
+            ImGui::SliderInt("Effect Index", &current_background_effect, 0,
+                             background_effects.size() - 1);
 
-            ImGui::InputFloat4("data1", (float*)& selected.data.data1);
-            ImGui::InputFloat4("data2", (float*)& selected.data.data2);
-            ImGui::InputFloat4("data3", (float*)& selected.data.data3);
-            ImGui::InputFloat4("data4", (float*)& selected.data.data4);
+            ImGui::InputFloat4("data1", (float *)&selected.data.data1);
+            ImGui::InputFloat4("data2", (float *)&selected.data.data2);
+            ImGui::InputFloat4("data3", (float *)&selected.data.data3);
+            ImGui::InputFloat4("data4", (float *)&selected.data.data4);
 
             ImGui::End();
         }
@@ -491,8 +544,7 @@ void VulkanEngine::run() {
 }
 
 void VulkanEngine::draw() {
-    VK_CHECK(vkWaitForFences(device, 1, &get_current_frame().render_fence,
-                             true,
+    VK_CHECK(vkWaitForFences(device, 1, &get_current_frame().render_fence, true,
                              1000000000));
 
     get_current_frame().deletion_queue.flush();
@@ -526,6 +578,11 @@ void VulkanEngine::draw() {
     draw_background(cmd);
 
     vkutil::transition_img(cmd, draw_img.img, VK_IMAGE_LAYOUT_GENERAL,
+                           VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    
+    draw_geometry(cmd);
+
+    vkutil::transition_img(cmd, draw_img.img, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
     vkutil::transition_img(cmd, swapchain_imgs[swapchain_img_index],
                            VK_IMAGE_LAYOUT_UNDEFINED,
@@ -637,3 +694,35 @@ void VulkanEngine::immediate_submit(
 
     VK_CHECK(vkWaitForFences(device, 1, &imm_fence, true, 9999999999));
 }
+
+void VulkanEngine::draw_geometry(VkCommandBuffer cmd) {
+    VkRenderingAttachmentInfo color_attachment = vkinit::attachment_info(draw_img.img_view, nullptr, VK_IMAGE_LAYOUT_GENERAL);
+    
+    VkRenderingInfo render_info = vkinit::rendering_info(draw_extent, &color_attachment, nullptr);
+    vkCmdBeginRendering(cmd, &render_info);
+
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, triangle_pipeline);
+
+    VkViewport viewport = {};
+    viewport.x = 0;
+    viewport.y = 0;
+    viewport.width = draw_extent.width;
+    viewport.height = draw_extent.height;
+    viewport.minDepth = 0.f;
+    viewport.maxDepth = 1.f;
+
+    vkCmdSetViewport(cmd, 0, 1, &viewport);
+
+    VkRect2D scissor = {};
+    scissor.offset.x = 0;
+    scissor.offset.y = 0;
+    scissor.extent.width = draw_extent.width;
+    scissor.extent.height = draw_extent.height;
+
+    vkCmdSetScissor(cmd, 0, 1, &scissor);
+
+    vkCmdDraw(cmd, 3, 1, 0, 0);
+
+    vkCmdEndRendering(cmd);
+}
+
