@@ -140,7 +140,7 @@ VkImageCreateInfo vkinit::img_create_info(VkFormat format,
 }
 
 VkImageViewCreateInfo
-vkinit::img_view_create_info(VkFormat format, VkImage img,
+vkinit::imgview_create_info(VkFormat format, VkImage img,
                              VkImageAspectFlags aspect_flags) {
     VkImageViewCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;

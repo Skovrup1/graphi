@@ -171,6 +171,7 @@ void VulkanEngine::init_vulkan() {
 void VulkanEngine::init_swapchain() {
     create_swapchain(window_extent.width, window_extent.height);
 
+    // create draw image
     VkExtent3D draw_img_extent = {
         window_extent.width,
         window_extent.height,
@@ -197,15 +198,39 @@ void VulkanEngine::init_swapchain() {
     vmaCreateImage(alloc, &rimg_info, &rimg_alloc_info, &draw_img.img,
                    &draw_img.allocation, nullptr);
 
-    VkImageViewCreateInfo rview_info = vkinit::img_view_create_info(
+    VkImageViewCreateInfo rview_info = vkinit::imgview_create_info(
         draw_img.img_format, draw_img.img, VK_IMAGE_ASPECT_COLOR_BIT);
 
     VK_CHECK(
         vkCreateImageView(device, &rview_info, nullptr, &draw_img.img_view));
 
+    // create depth image
+    depth_img.img_format = VK_FORMAT_D32_SFLOAT;
+    depth_img.img_extent = draw_img.img_extent;
+    VkImageUsageFlags depth_image_usages{};
+    depth_image_usages |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+    // depth image create info
+    VkImageCreateInfo dimg_info = vkinit::img_create_info(
+        depth_img.img_format, depth_image_usages, depth_img.img_extent);
+
+    vmaCreateImage(alloc, &dimg_info, &rimg_alloc_info, &depth_img.img,
+                   &depth_img.allocation, nullptr);
+
+    // depth imageview create info
+    VkImageViewCreateInfo dview_info = vkinit::imgview_create_info(
+        depth_img.img_format, depth_img.img, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+    VK_CHECK(
+        vkCreateImageView(device, &dview_info, nullptr, &depth_img.img_view));
+
+    // cleanup
     main_deletion_queue.push_func([*this]() {
         vkDestroyImageView(device, draw_img.img_view, nullptr);
         vmaDestroyImage(alloc, draw_img.img, draw_img.allocation);
+
+        vkDestroyImageView(device, depth_img.img_view, nullptr);
+        vmaDestroyImage(alloc, depth_img.img, depth_img.allocation);
     });
 }
 

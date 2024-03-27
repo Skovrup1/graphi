@@ -73,6 +73,7 @@ class VulkanEngine {
     uint32_t graphics_queue_family;
     VmaAllocator alloc;
     AllocactedImg draw_img;
+    AllocactedImg depth_img;
     VkExtent2D draw_extent;
     DescriptorAllocator global_descriptor_allocator;
     VkDescriptorSet draw_img_descriptors;
