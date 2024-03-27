@@ -20,3 +20,6 @@
 [submodule "src/vma"]
 	path = src/vma
 	url = git@github.com:GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+[submodule "src/fastgltf"]
+	path = src/fastgltf
+	url = ./src/fastgltf
