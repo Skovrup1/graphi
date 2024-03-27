@@ -1,7 +1,9 @@
 #pragma once
 
 #include "vk_descriptors.h"
+#include "vk_loader.h"
 #include "vk_types.h"
+
 
 struct DeletionQueue {
     std::deque<std::function<void()>> deletors;
@@ -87,6 +89,7 @@ class VulkanEngine {
     VkPipelineLayout mesh_pipeline_layout;
     VkPipeline mesh_pipeline;
     GPUMeshBuffers rectangle;
+    std::vector<std::shared_ptr<MeshAsset>> test_meshes;
 
     static VulkanEngine &Get();
     void init();
@@ -94,6 +97,7 @@ class VulkanEngine {
     void draw();
     void run();
     void immediate_submit(std::function<void(VkCommandBuffer cmd)> &&function);
+    GPUMeshBuffers upload_mesh(std::span<uint32_t> indices, std::span<Vertex> vertices);
 
   private:
     void init_vulkan();
@@ -115,6 +119,5 @@ class VulkanEngine {
     AllocatedBuffer create_buffer(size_t alloc_size, VkBufferUsageFlags usage,
                                   VmaMemoryUsage memory_usage);
     void destroy_buffer(const AllocatedBuffer &buffer);
-    GPUMeshBuffers upload_mesh(std::span<uint32_t> indices, std::span<Vertex> vertices);
     void init_default_data();
 };

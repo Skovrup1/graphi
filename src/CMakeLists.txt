@@ -7,6 +7,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(CMAKE_BUILD_TYPE Debug)
+
 #set(CMAKE_CXX_CLANG_TIDY "clang-tidy;-checks=-*,modernize-*")
 
 add_subdirectory(vk-bootstrap)
@@ -34,8 +36,8 @@ add_executable(
     vk_pipelines.cpp
     vk_loader.h
     vk_loader.cpp
-    stb_image.h
-    tiny_obj_loader.h
+    stb_image/stb_image.h
+    tiny_obj_loader/tiny_obj_loader.h
     )
 
 target_include_directories(main PUBLIC
@@ -45,8 +47,9 @@ target_include_directories(main PUBLIC
     vma/include
     vk-bootstrap/src
     fastgltf/include
+    stb_image
+    tiny_obj_loader
     )
-
 
 # IMGUI
 add_library(imgui STATIC)

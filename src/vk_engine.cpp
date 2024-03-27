@@ -1,5 +1,8 @@
 #include "vk_engine.h"
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include "glm/gtx/transform.hpp"
+
 #include <imgui.h>
 #include <imgui_impl_sdl2.h>
 #include <imgui_impl_vulkan.h>
@@ -738,9 +741,34 @@ void VulkanEngine::draw_geometry(VkCommandBuffer cmd) {
 
     vkCmdPushConstants(cmd, mesh_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
                        sizeof(GPUDrawPushConstants), &push_constants);
-    vkCmdBindIndexBuffer(cmd, rectangle.index_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdBindIndexBuffer(cmd, rectangle.index_buffer.buffer, 0,
+                         VK_INDEX_TYPE_UINT32);
 
     vkCmdDrawIndexed(cmd, 6, 1, 0, 0, 0);
+
+    // viewport
+    glm::mat4 view = glm::translate(glm::vec3{0, 0, -5});
+
+    // camera
+    glm::mat4 projection = glm::perspective(
+        glm::radians(70.f),
+        (float)draw_extent.width / (float)draw_extent.height, 10000.f, 0.1f);
+
+    // invert the y axis
+    projection[1][1] *= -1;
+
+    push_constants.world_matrix = projection * view;
+
+    push_constants.vertex_buffer =
+        test_meshes[2]->mesh_buffers.vertex_buffer_address;
+
+    vkCmdPushConstants(cmd, mesh_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
+                       sizeof(GPUDrawPushConstants), &push_constants);
+    vkCmdBindIndexBuffer(cmd, test_meshes[2]->mesh_buffers.index_buffer.buffer,
+                         0, VK_INDEX_TYPE_UINT32);
+
+    vkCmdDrawIndexed(cmd, test_meshes[2]->surfaces[0].count, 1,
+                     test_meshes[2]->surfaces[0].start_index, 0, 0);
 
     vkCmdEndRendering(cmd);
 }
@@ -911,4 +939,6 @@ void VulkanEngine::init_default_data() {
     rect_indices[5] = 3;
 
     rectangle = upload_mesh(rect_indices, rect_vertices);
+
+    test_meshes = load_gltf_meshes(this, "assets/basicmesh.glb").value();
 }
