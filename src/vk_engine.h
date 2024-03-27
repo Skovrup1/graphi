@@ -75,7 +75,7 @@ class VulkanEngine {
     DescriptorAllocator global_descriptor_allocator;
     VkDescriptorSet draw_img_descriptors;
     VkDescriptorSetLayout draw_img_descriptor_layout;
-//    VkPipeline gradient_pipeline;
+    //    VkPipeline gradient_pipeline;
     VkPipelineLayout gradient_pipeline_layout;
     VkFence imm_fence;
     VkCommandBuffer imm_command_buffer;
@@ -84,6 +84,9 @@ class VulkanEngine {
     int current_background_effect{0};
     VkPipelineLayout triangle_pipeline_layout;
     VkPipeline triangle_pipeline;
+    VkPipelineLayout mesh_pipeline_layout;
+    VkPipeline mesh_pipeline;
+    GPUMeshBuffers rectangle;
 
     static VulkanEngine &Get();
     void init();
@@ -102,10 +105,16 @@ class VulkanEngine {
     void init_background_pipelines();
     void init_imgui();
     void init_triangle_pipeline();
+    void init_mesh_pipeline();
     void resize_swapchain();
     void create_swapchain(uint32_t width, uint32_t height);
     void destroy_swapchain();
     void draw_background(VkCommandBuffer cmd);
     void draw_imgui(VkCommandBuffer cmd, VkImageView targetImageView);
     void draw_geometry(VkCommandBuffer cmd);
+    AllocatedBuffer create_buffer(size_t alloc_size, VkBufferUsageFlags usage,
+                                  VmaMemoryUsage memory_usage);
+    void destroy_buffer(const AllocatedBuffer &buffer);
+    GPUMeshBuffers upload_mesh(std::span<uint32_t> indices, std::span<Vertex> vertices);
+    void init_default_data();
 };

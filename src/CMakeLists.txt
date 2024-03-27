@@ -7,14 +7,14 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# to remove warnings in clang
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nullability-completeness")
+#set(CMAKE_CXX_CLANG_TIDY "clang-tidy;-checks=-*,modernize-*")
 
 add_subdirectory(vk-bootstrap)
 add_subdirectory(sdl)
 add_subdirectory(fmt)
 add_subdirectory(glm)
 add_subdirectory(vma)
+add_subdirectory(fastgltf)
 
 find_package(Vulkan REQUIRED)
 
@@ -32,16 +32,19 @@ add_executable(
     vk_descriptors.cpp
     vk_pipelines.h
     vk_pipelines.cpp
+    vk_loader.h
+    vk_loader.cpp
     stb_image.h
     tiny_obj_loader.h
     )
 
-target_include_directories(main PUBLIC 
+target_include_directories(main PUBLIC
     sdl
     imgui
     imgui/backends
     vma/include
     vk-bootstrap/src
+    fastgltf/include
     )
 
 
@@ -73,6 +76,7 @@ target_link_libraries(
     glm::glm
     vk-bootstrap::vk-bootstrap
     GPUOpen::VulkanMemoryAllocator
+    fastgltf::fastgltf
     imgui
     )
 
